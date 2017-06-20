@@ -69,7 +69,7 @@ const (
 
 var (
 	// Complement describes how bases pair.
-	Complement = [255]byte{'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
+	Complement = [255]func() byte{'A': T, 'C': G, 'G': C, 'T': A}
 
 	// Code is the pseudo-codon to amino acid lookup.
 	Code = [16]AminoAcid{
@@ -83,12 +83,12 @@ var (
 
 	// Inserts specifies what base or pseudobase
 	// is inserted by insert and cut amino acids.
-	Inserts = [16]byte{
-		Cut: 0x0, // This value not be altered.
-		Ina: 'A',
-		Inc: 'C',
-		Ing: 'G',
-		Int: 'T',
+	Inserts = [16]func() byte{
+		Cut: null, // This value must not be altered.
+		Ina: A,
+		Inc: C,
+		Ing: G,
+		Int: T,
 	}
 
 	// Moves specifies the direction the search amino
@@ -131,11 +131,11 @@ var (
 
 	// Preference specifies the binding preference of
 	// each folding direction.
-	Preference = [4]byte{
-		East:  'A',
-		North: 'C',
-		South: 'G',
-		West:  'T',
+	Preference = [4]func() byte{
+		East:  A,
+		North: C,
+		South: G,
+		West:  T,
 	}
 )
 
@@ -148,6 +148,20 @@ func init() {
 		}
 	}
 }
+
+func null() byte { return 0 }
+
+// A returns the 'A' base.
+func A() byte { return 'A' }
+
+// C returns the 'C' base.
+func C() byte { return 'C' }
+
+// G returns the 'G' base.
+func G() byte { return 'G' }
+
+// T returns the 'T' base.
+func T() byte { return 'T' }
 
 // IsPurine returns whether b is 'A' or 'G'.
 func IsPurine(b byte) bool { return b == 'A' || b == 'G' }
@@ -193,7 +207,7 @@ func (e Enzyme) Fold() (first, last Direction) {
 func (e Enzyme) Preference() byte {
 	first, last := e.Fold()
 	t := Kink(East - first)
-	return Preference[(last+Direction(t))&0x3]
+	return Preference[(last+Direction(t))&0x3]()
 }
 
 // OperateOn performs the enzymatic activity of the receiver on the given
@@ -238,7 +252,7 @@ func (e Enzyme) OperateOn(s Strand, pos int, debug *bytes.Buffer) []Strand {
 			copyMode = false
 		case Cut, Ina, Inc, Ing, Int:
 			pos++
-			s = insert(s, Inserts[c], pos, false)
+			s = insert(s, Inserts[c](), pos, false)
 			d = insert(d, 0, pos, true)
 		case Rpy, Rpu, Lpy, Lpu:
 			move := Moves[c]
@@ -361,7 +375,7 @@ func (s Strand) String() string {
 
 func copyOpposite(dst, src Strand, pos int) {
 	if index[src[pos]] != 0xff {
-		dst[len(dst)-pos-1] = Complement[src[pos]]
+		dst[len(dst)-pos-1] = Complement[src[pos]]()
 	}
 }
 
