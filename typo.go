@@ -353,8 +353,10 @@ func (s Strand) Enzymes() []Enzyme {
 	for i := 0; i+1 < len(s); i += 2 {
 		c := Code[index[s[i]]*4+index[s[i+1]]]
 		if c == Non {
-			e = append(e, buf)
-			buf = buf[len(buf):]
+			if len(buf) != 0 {
+				e = append(e, buf)
+				buf = buf[len(buf):]
+			}
 			continue
 		}
 		buf = append(buf, c)

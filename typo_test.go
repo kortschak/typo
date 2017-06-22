@@ -52,6 +52,8 @@ var strandEnzymeTests = []struct {
 }{
 	{strand: []byte("TAGATCCAGTCCACATCGA"), want: []Enzyme{{Rpy, Ina, Rpu, Mvr, Int, Mvl, Cut, Swi, Cop}}},
 	{strand: []byte("GATCCGGCAT"), want: []Enzyme{{Ina, Rpu, Cop, Inc, Swi}}},
+	{strand: []byte("AA"), want: nil},
+	{strand: []byte("AAAA"), want: nil},
 }
 
 func TestStrandEnzyme(t *testing.T) {
