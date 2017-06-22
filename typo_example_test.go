@@ -32,7 +32,7 @@ func Example_book() {
 		// being operated on is consumed by the enzyme
 		// so this example creates a new Strand from
 		// a string constate for each start position.
-		products := e.OperateOn(Strand(s), p, &buf)
+		products := e.OperateOn(NewComplex(Strand(s)), p, &buf).Products()
 		fmt.Printf("%s\nProducts:%q\n\n", &buf, products)
 	}
 
@@ -82,4 +82,48 @@ func Example_book() {
 	// off   18 - "TAGATCCAGTCCATCGAC" "G·················"
 	//
 	// Products:["TAGATCCAGTCCATCGAC" "G"]
+}
+
+func Example_quine() {
+	seed := "CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG"
+	pool := []Strand{Strand(seed)}
+
+	fmt.Printf("%s: 1\n", seed)
+
+	for n := 0; n < 5; n++ {
+		var daughters []Strand
+		for _, s := range pool {
+			m := s.Enzymes()
+			c := NewComplex(s)
+			for _, e := range m {
+				pref := e.Preference()
+				for i, b := range c[0] {
+					if b == pref {
+						c = e.OperateOn(c, i, nil)
+						break
+					}
+				}
+			}
+			daughters = append(daughters, c.Products()...)
+		}
+		pool = daughters
+
+		gen := make(map[string]int)
+		for _, s := range pool {
+			gen[string(s)]++
+		}
+		for s, count := range gen {
+			fmt.Printf("%s: %d\n", s, count)
+		}
+	}
+
+	// Output:
+	//
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 1
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 2
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 4
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 8
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 16
+	// CGTTCCTCTCTCTCTATAGAGAGAGAGGAACG: 32
+
 }

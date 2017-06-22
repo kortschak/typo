@@ -211,37 +211,39 @@ func (e Enzyme) Preference() byte {
 }
 
 // OperateOn performs the enzymatic activity of the receiver on the given
-// typogenetics strand starting from the specified position according to
-// rules of typogenetics on pp504-513 of GEB and returns the resulting
-// product strands.
+// typogenetics complex starting from the specified position of the first
+// strand of the complex according to rules of typogenetics on pp504-513
+// of GEB and returns the resulting product complex.
 // If debug is not nil, the sequence of operations and the intermediate
 // results are written into the buffer.
 // OperateOn will panic if the receiver includes an unknown amino acid
 // or the Non amino acid.
-func (e Enzyme) OperateOn(s Strand, pos int, debug *bytes.Buffer) []Strand {
+func (e Enzyme) OperateOn(c Complex, pos int, debug *bytes.Buffer) Complex {
 	copyMode := false
-	d := make(Strand, len(s))
+	if len(c[0]) != len(c[1]) {
+		panic("typo: invalid Complex: length mismatch")
+	}
 	var w *tabwriter.Writer
 	if debug != nil {
 		w = tabwriter.NewWriter(debug, 0, 0, 1, ' ', 0)
 	}
 	completed := true
-	for _, c := range e {
+	for _, cmd := range e {
 		if w != nil {
-			fmt.Fprintf(w, "%s\t%4d\t%c\t%q\t%q\n", c, pos, s[pos], s, d)
+			fmt.Fprintf(w, "%s\t%4d\t%c\t%q\t%q\n", cmd, pos, c[0][pos], c[0], c[1])
 		}
 
-		switch c {
+		switch cmd {
 		default:
 			panic("unknown amino acid in enzyme")
 		case Non:
 			panic("non used in enzyme")
 		case Del:
-			s[pos] = 0
+			c[0][pos] = 0
 			pos--
 		case Swi:
-			s, d = d, s
-			pos = len(s) - pos - 1
+			c[0], c[1] = c[1], c[0]
+			pos = len(c[0]) - pos - 1
 		case Mvr:
 			pos++
 		case Mvl:
@@ -252,110 +254,56 @@ func (e Enzyme) OperateOn(s Strand, pos int, debug *bytes.Buffer) []Strand {
 			copyMode = false
 		case Cut, Ina, Inc, Ing, Int:
 			pos++
-			s = insert(s, Inserts[c](), pos, false)
-			d = insert(d, 0, pos, true)
+			c[0] = insert(c[0], Inserts[cmd](), pos, false)
+			c[1] = insert(c[1], 0, pos, true)
 		case Rpy, Rpu, Lpy, Lpu:
-			move := Moves[c]
+			move := Moves[cmd]
 			pos += move
-			for found := Matches[c]; onStrand(s, pos); pos += move {
+			for found := Matches[cmd]; onStrand(c[0], pos); pos += move {
 				if copyMode {
-					copyOpposite(d, s, pos)
+					copyOpposite(c[1], c[0], pos)
 				}
-				if found(s[pos]) {
+				if found(c[0][pos]) {
 					break
 				}
 			}
 		}
-		if !onStrand(s, pos) {
+		if !onStrand(c[0], pos) {
 			if w != nil {
-				if 0 <= pos && pos < len(s) {
-					fmt.Fprintf(w, "empty\t%4d\t·\t%q\t%q\n", pos, s, d)
+				if 0 <= pos && pos < len(c[0]) {
+					fmt.Fprintf(w, "empty\t%4d\t·\t%q\t%q\n", pos, c[0], c[1])
 				} else {
-					fmt.Fprintf(w, "off\t%4d\t-\t%q\t%q\n", pos, s, d)
+					fmt.Fprintf(w, "off\t%4d\t-\t%q\t%q\n", pos, c[0], c[1])
 				}
 			}
 			completed = false
 			break
 		}
 		if copyMode {
-			copyOpposite(d, s, pos)
+			copyOpposite(c[1], c[0], pos)
 		}
 	}
 	if w != nil {
 		if completed {
-			var c byte
-			if 0 <= pos && pos < len(s) {
-				c = s[pos]
-				if c == 0 {
-					c = '·'
+			var b byte
+			if 0 <= pos && pos < len(c[0]) {
+				b = c[0][pos]
+				if b == 0 {
+					b = '·'
 				}
 			} else {
-				c = '-'
+				b = '-'
 			}
-			fmt.Fprintf(w, "done\t%4d\t%c\t%q\t%q\n", pos, c, s, d)
+			fmt.Fprintf(w, "done\t%4d\t%c\t%q\t%q\n", pos, b, c[0], c[1])
 		}
 		w.Flush()
 	}
 
-	return products(s, d)
+	return c
 }
 
 func onStrand(s Strand, pos int) bool {
 	return 0 <= pos && pos < len(s) && s[pos] != 0
-}
-
-func products(s, d Strand) []Strand {
-	var n int
-	var isSeq bool
-	for _, b := range s {
-		wasSeq := isSeq
-		isSeq = b != 0
-		if isSeq && !wasSeq {
-			n++
-		}
-	}
-	isSeq = false
-	for _, b := range d {
-		wasSeq := isSeq
-		isSeq = b != 0
-		if isSeq && !wasSeq {
-			n++
-		}
-	}
-
-	isSeq = false
-	start := -1
-	p := make([]Strand, 0, n)
-	for i, b := range s {
-		wasSeq := isSeq
-		isSeq = b != 0
-		if isSeq && !wasSeq {
-			start = i
-		} else if wasSeq && !isSeq {
-			p = append(p, s[start:i])
-			start = -1
-		}
-	}
-	if isSeq {
-		p = append(p, s[start:])
-	}
-	isSeq = false
-	start = -1
-	for i, b := range d {
-		wasSeq := isSeq
-		isSeq = b != 0
-		if isSeq && !wasSeq {
-			start = i
-		} else if wasSeq && !isSeq {
-			p = append(p, d[start:i])
-			start = -1
-		}
-	}
-	if isSeq {
-		p = append(p, d[start:])
-	}
-
-	return p
 }
 
 // Strand is a typogenetics base strand.
@@ -415,4 +363,46 @@ func (s Strand) Enzymes() []Enzyme {
 		e = append(e, buf)
 	}
 	return e
+}
+
+// Complex is a complex of complementary strands.
+type Complex [2]Strand
+
+// NewComplex returns a new valid complex.
+func NewComplex(s Strand) Complex { return Complex{s, make(Strand, len(s))} }
+
+// Products returns the dissociated strands of a complex.
+func (c Complex) Products() []Strand {
+	var n int
+	for _, s := range c {
+		var isSeq bool
+		for _, b := range s {
+			wasSeq := isSeq
+			isSeq = b != 0
+			if isSeq && !wasSeq {
+				n++
+			}
+		}
+	}
+
+	p := make([]Strand, 0, n)
+	for _, s := range c {
+		var isSeq bool
+		start := -1
+		for i, b := range s {
+			wasSeq := isSeq
+			isSeq = b != 0
+			if isSeq && !wasSeq {
+				start = i
+			} else if wasSeq && !isSeq {
+				p = append(p, s[start:i])
+				start = -1
+			}
+		}
+		if isSeq {
+			p = append(p, s[start:])
+		}
+	}
+
+	return p
 }

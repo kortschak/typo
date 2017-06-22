@@ -131,13 +131,15 @@ func TestInsert(t *testing.T) {
 }
 
 var productsTests = []struct {
-	s, d Strand
+	c    Complex
 	want []Strand
 }{
-	{s: Strand{}, d: Strand{}, want: []Strand{}},
+	{c: Complex{{}, {}}, want: []Strand{}},
 	{
-		s: Strand{0, 0, 1, 2, 3, 0, 0, 4, 0, 5},
-		d: Strand{0, 6, 7, 0, 8, 0, 0, 9, 10, 0},
+		c: Complex{
+			{0, 0, 1, 2, 3, 0, 0, 4, 0, 5},
+			{0, 6, 7, 0, 8, 0, 0, 9, 10, 0},
+		},
 		want: []Strand{
 			{1, 2, 3},
 			{4},
@@ -148,8 +150,10 @@ var productsTests = []struct {
 		},
 	},
 	{
-		s: Strand{1, 2, 3, 0, 0, 4, 0, 5},
-		d: Strand{6, 7, 8, 0, 0, 9, 10, 0},
+		c: Complex{
+			{1, 2, 3, 0, 0, 4, 0, 5},
+			{6, 7, 8, 0, 0, 9, 10, 0},
+		},
 		want: []Strand{
 			{1, 2, 3},
 			{4},
@@ -162,7 +166,7 @@ var productsTests = []struct {
 
 func TestProducts(t *testing.T) {
 	for _, test := range productsTests {
-		got := products(test.s, test.d)
+		got := test.c.Products()
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("unexpected products result:\ngot: %q\nwant:%q", got, test.want)
 		}
@@ -207,7 +211,7 @@ var operateOnTests = []struct {
 func TestOperateOn(t *testing.T) {
 	for _, test := range operateOnTests {
 		var buf bytes.Buffer
-		got := test.enzyme.OperateOn(test.strand, test.pos, &buf)
+		got := test.enzyme.OperateOn(NewComplex(test.strand), test.pos, &buf).Products()
 		if !reflect.DeepEqual(got, test.want) {
 			t.Errorf("unexpected operation results:\ngot: %q\nwant:%q", got, test.want)
 			t.Logf("\n%s", &buf)
