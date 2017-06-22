@@ -371,7 +371,7 @@ func (s Strand) Enzymes() []Enzyme {
 type Complex [2]Strand
 
 // NewComplex returns a new valid complex.
-func NewComplex(s Strand) Complex { return Complex{s, make(Strand, len(s))} }
+func NewComplex(s Strand) Complex { return Complex{append(Strand(nil), s...), make(Strand, len(s))} }
 
 // Products returns the dissociated strands of a complex.
 func (c Complex) Products() []Strand {
