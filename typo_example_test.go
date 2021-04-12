@@ -31,7 +31,7 @@ func Example_book() {
 		// As stated in the game rules, the strand
 		// being operated on is consumed by the enzyme
 		// so this example creates a new Strand from
-		// a string constate for each start position.
+		// a string constant for each start position.
 		products := e.OperateOn(NewComplex(Strand(s)), p, &buf).Products()
 		fmt.Printf("%s\nProducts:%q\n\n", &buf, products)
 	}
